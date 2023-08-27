@@ -1,0 +1,4 @@
+audiocraft
+numpy
+simpleaudio
+pytaglib
