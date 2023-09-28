@@ -2,3 +2,4 @@ audiocraft
 numpy
 simpleaudio
 pytaglib
+seewav

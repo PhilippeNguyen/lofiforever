@@ -28,8 +28,10 @@ def main(stdscr, music_directory, show_instructions):
     dir_obs = DirectoryObserver(
         music_directory,
         unplayed_queue=unplayed_queue,
+        played_queue=played_queue,
         stop_signal=stop_signal,
     )
+    dir_obs.load_directory(load_as_played=True)
     player_proc = mp.Process(target=player.run)
     dir_proc = mp.Process(target=dir_obs.run)
     player_proc.start()
@@ -54,7 +56,6 @@ def main(stdscr, music_directory, show_instructions):
             center_y = h // 2
             try:
                 stdscr.addstr(center_y, center_x, center_text)
-
             except curses.error:
                 pass
 

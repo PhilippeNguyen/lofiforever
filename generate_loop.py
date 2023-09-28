@@ -21,6 +21,7 @@ def main(
     if not os.path.exists(music_directory):
         raise Exception(f"music_directory does not exist: {music_directory}")
     model = musicgen.MusicGen.get_pretrained(model_name, device="cuda")
+    model.compression_model.to("cpu")
     model.set_generation_params(duration=duration)
     min_loop_length_frames = min_loop_length * model.frame_rate
 
@@ -28,10 +29,10 @@ def main(
     assert prompt_tokens is None
     tokens = model._generate_tokens(attributes, prompt_tokens, progress=True)
 
-    emb = model.compression_model.decode_latent(tokens)
-    emb = emb.detach().cpu()
+    emb = model.compression_model.decode_latent(tokens.detach().cpu())
     emb = emb.numpy()
     full_embs = []
+    print()
     for batch_idx, emb_b in enumerate(emb):
         nemb_b = normalize(emb_b)
 
@@ -57,20 +58,20 @@ def main(
             full_emb.append(emb_b[:, first_frame:last_frame])
         if num_loops > 1:
             full_emb.append(emb_b[:, first_frame:])
+        else:
+            full_emb.append(emb_b[:, last_frame:])
         full_embs.append(np.hstack(full_emb))
 
     # process each song separately since they may have different lengths
     for batch_idx, full_emb in enumerate(full_embs):
         with torch.no_grad():
-            out = model.compression_model.decoder(
-                torch.tensor(full_emb).unsqueeze(0).cuda()
-            )
+            out = model.compression_model.decoder(torch.tensor(full_emb).unsqueeze(0))
             wav = model.compression_model.postprocess(out)
-            wav = wav.detach().cpu().squeeze(0)
+            wav = wav.detach().squeeze(0)
         aud = ipd.Audio(wav, rate=32000)
         save_path = os.path.join(
             music_directory,
-            f"{datetime.now().strftime('%H%M%S%m%d%Y')}_{batch_idx}.wav",
+            f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{batch_idx}.wav",
         )
         with open(save_path, mode="bw") as f:
             f.write(aud.data)

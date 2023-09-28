@@ -13,11 +13,13 @@ class DirectoryObserver:
         self,
         directory: str,
         unplayed_queue: mp.Queue,
+        played_queue: mp.Queue,
         stop_signal: mp.Value,
         refresh_time: int = 1,
         last_scan_time: int = None,
     ) -> None:
         self.unplayed_queue = unplayed_queue
+        self.played_queue = played_queue
         self.stop_signal = stop_signal
         self.refresh_time = refresh_time
         self.directory = directory
@@ -26,16 +28,17 @@ class DirectoryObserver:
         else:
             self.last_scan_time = last_scan_time
 
-        self.load_directory(self.directory)
-
-    def load_directory(self, directory: str = None):
+    def load_directory(self, directory: str = None, load_as_played: bool = False):
         if directory is None:
             directory = self.directory
         for file in os.listdir(directory):
             file_ne, ext = os.path.splitext(file)
             if ext not in (".wav"):
                 continue
-            self.unplayed_queue.put(os.path.join(directory, file))
+            if load_as_played:
+                self.played_queue.put(os.path.join(directory, file))
+            else:
+                self.unplayed_queue.put(os.path.join(directory, file))
 
     def get_new_files(
         self,
